@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
-const API_URL = "";
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 function App() {
 
@@ -3062,9 +3062,9 @@ function CareerPage() {
 
       const [applicationsResponse, skillsResponse, mySkillsResponse] =
         await Promise.all([
-          fetch("/api/career/applications", { headers }),
-          fetch("/api/career/skills", { headers }),
-          fetch("/api/career/my-skills", { headers }),
+          fetch(`${API_URL}/api/career/applications`, { headers }),
+          fetch(`${API_URL}/api/career/skills`, { headers }),
+          fetch(`${API_URL}/api/career/my-skills`, { headers }),
         ]);
 
       const applicationsData = await applicationsResponse.json();
@@ -3122,7 +3122,7 @@ function CareerPage() {
       setError("");
 
       const token = localStorage.getItem("token");
-      const response = await fetch("/api/career/applications", {
+      const response = await fetch(`${API_URL}/api/career/applications`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3158,7 +3158,7 @@ function CareerPage() {
       setError("");
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`/api/career/applications/${id}`, {
+      const response = await fetch(`${API_URL}/api/career/applications/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -3243,7 +3243,7 @@ function CareerPage() {
       setError("");
       const token = localStorage.getItem("token");
 
-      const response = await fetch("/api/career/my-skills", {
+      const response = await fetch(`${API_URL}/api/career/my-skills`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3269,7 +3269,7 @@ function CareerPage() {
       setError("");
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`/api/career/my-skills/${skillId}`, {
+      const response = await fetch(`${API_URL}/api/career/my-skills/${skillId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -3555,7 +3555,7 @@ function GoalsPage() {
 
       const token = localStorage.getItem("token");
 
-      const response = await fetch("/api/goals", {
+      const response = await fetch(`${API_URL}/api/goals`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -3602,7 +3602,7 @@ function GoalsPage() {
 
       const token = localStorage.getItem("token");
 
-      const response = await fetch("/api/goals", {
+      const response = await fetch(`${API_URL}/api/goals`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3638,7 +3638,7 @@ function GoalsPage() {
 
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`/api/goals/${id}`, {
+      const response = await fetch(`${API_URL}/api/goals/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -3667,7 +3667,7 @@ function GoalsPage() {
 
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`/api/goals/${goal.id}`, {
+      const response = await fetch(`${API_URL}/api/goals/${goal.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
