@@ -1,0 +1,140 @@
+/* =========================================================
+   AI ASSISTANT
+   Rule-based student-life intelligence — no API required
+========================================================= */
+
+app.post("/api/ai/chat", authMiddleware, async (req, res) => {
+  try {
+    const message = String(req.body?.message || "").trim();
+
+    if (!message) {
+      return res.status(400).json({
+        message: "Please enter a question."
+      });
+    }
+
+    const userId = req.user.id;
+
+    const [
+      tasksResult,
+      goalsResult,
+      habitsResult,
+      careerResult,
+      calendarResult,
+      incomeResult,
+      expenseResult
+    ] = await Promise.all([
+      pool.query(
+        "SELECT COUNT(*)::int AS count FROM tasks WHERE user_id = $1",
+        [userId]
+      ),
+      pool.query(
+        "SELECT COUNT(*)::int AS count FROM goals WHERE user_id = $1",
+        [userId]
+      ),
+      pool.query(
+        "SELECT COUNT(*)::int AS count FROM habits WHERE user_id = $1",
+        [userId]
+      ),
+      pool.query(
+        "SELECT COUNT(*)::int AS count FROM career_applications WHERE user_id = $1",
+        [userId]
+      ),
+      pool.query(
+        "SELECT COUNT(*)::int AS count FROM calendar_events WHERE user_id = $1",
+        [userId]
+      ),
+      pool.query(
+        "SELECT COALESCE(SUM(amount), 0)::numeric AS total FROM income WHERE user_id = $1",
+        [userId]
+      ),
+      pool.query(
+        "SELECT COALESCE(SUM(amount), 0)::numeric AS total FROM expenses WHERE user_id = $1",
+        [userId]
+      )
+    ]);
+
+    const tasks = tasksResult.rows[0].count;
+    const goals = goalsResult.rows[0].count;
+    const habits = habitsResult.rows[0].count;
+    const career = careerResult.rows[0].count;
+    const calendar = calendarResult.rows[0].count;
+    const income = Number(incomeResult.rows[0].total || 0);
+    const expenses = Number(expenseResult.rows[0].total || 0);
+
+    const q = message.toLowerCase();
+
+    let response;
+
+    if (q.includes("today") || q.includes("focus") || q.includes("priority")) {
+      response =
+        `Based on your Student Life OS data, you currently have ${tasks} task(s), ` +
+        `${goals} goal(s), ${habits} habit(s), and ${calendar} calendar event(s). ` +
+        `I recommend starting with your most important academic task, then reviewing ` +
+        `your goals and keeping your daily habits consistent.`;
+    } else if (q.includes("week") || q.includes("plan")) {
+      response =
+        `For your week, prioritize your important tasks first, make progress on your ` +
+        `${goals} goal(s), maintain your ${habits} habit(s), and keep an eye on your ` +
+        `${calendar} scheduled event(s). Leave some free time for unexpected work.`;
+    } else if (
+      q.includes("finance") ||
+      q.includes("money") ||
+      q.includes("spending") ||
+      q.includes("expense") ||
+      q.includes("income")
+    ) {
+      const balance = income - expenses;
+
+      response =
+        `Your recorded income is $${income.toFixed(2)} and recorded expenses are ` +
+        `$${expenses.toFixed(2)}, giving you a recorded balance of ` +
+        `$${balance.toFixed(2)}. Review your expenses regularly and keep spending ` +
+        `aligned with your budget.`;
+    } else if (
+      q.includes("career") ||
+      q.includes("job") ||
+      q.includes("internship")
+    ) {
+      response =
+        `You currently have ${career} career application(s) recorded. ` +
+        `A good next step is to review your applications, follow up on pending ` +
+        `opportunities, and keep improving your resume and interview preparation.`;
+    } else if (q.includes("habit") || q.includes("routine")) {
+      response =
+        `You currently have ${habits} habit(s) recorded. Consistency matters more ` +
+        `than trying to change everything at once. Pick one important habit and ` +
+        `make it part of your daily routine.`;
+    } else if (q.includes("goal")) {
+      response =
+        `You currently have ${goals} goal(s) recorded. Break your biggest goals ` +
+        `into smaller actions and connect those actions to your daily tasks.`;
+    } else if (q.includes("task")) {
+      response =
+        `You currently have ${tasks} task(s) recorded. Start with the task that ` +
+        `has the highest impact or closest deadline, then work through the list ` +
+        `one step at a time.`;
+    } else if (q.includes("overall") || q.includes("doing")) {
+      response =
+        `Here is your current Student Life OS snapshot: ${tasks} task(s), ` +
+        `${goals} goal(s), ${habits} habit(s), ${career} career application(s), ` +
+        `${calendar} calendar event(s), $${income.toFixed(2)} income recorded, ` +
+        `and $${expenses.toFixed(2)} in expenses. Keep your priorities balanced ` +
+        `across academics, routines, finances, and career development.`;
+    } else {
+      response =
+        `I can help you with tasks, goals, habits, finances, career, calendar, ` +
+        `or weekly planning. Try asking "What should I focus on today?"`;
+    }
+
+    res.json({ response });
+
+  } catch (error) {
+    console.error("AI Assistant error:", error);
+
+    res.status(500).json({
+      message: "Unable to generate an AI Assistant response."
+    });
+  }
+});
+

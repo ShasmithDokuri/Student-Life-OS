@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS files
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+
+# Local AI / development files
+.ollama/
+
+# Development backup files
+**/*-backup.*
+**/*.save
+**/*.jst
+
+# All development backup/history files
+**/*backup*
+**/*before-*
+**/*broken-*
