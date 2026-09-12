@@ -9,7 +9,7 @@ const { Pool } = require("pg");
 
 const app = express();
 
-const PORT = 5001;
+const PORT = process.env.PORT || 5001;
 
 const JWT_SECRET =
   process.env.JWT_SECRET || "student-life-os-dev-secret";
@@ -18,12 +18,19 @@ const JWT_SECRET =
    DATABASE
 ========================================================= */
 
-const pool = new Pool({
-  user: "shasmith",
-  host: "localhost",
-  database: "student_life_os",
-  port: 5432,
-});
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    })
+  : new Pool({
+      user: "shasmith",
+      host: "localhost",
+      database: "student_life_os",
+      port: 5432,
+    });
 
 /* =========================================================
    MIDDLEWARE
