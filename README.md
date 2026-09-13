@@ -4,7 +4,7 @@ AI-powered personal operating system for college students.
 
 ## 🚀 Live Demo
 
-[Open Student Life OS](YOUR_LIVE_WEBSITE_LINK)
+[Open Student Life OS](https://student-life-os-1.onrender.com)
 
 ## ✨ Features
 
