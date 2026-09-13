@@ -4245,10 +4245,10 @@ Rules:
 - If information is missing, clearly say what is unavailable instead of inventing it.
 `;
 
-    const ollamaResponse = await axios.post(
-      "http://127.0.0.1:11434/api/chat",
+    const groqResponse = await axios.post(
+      "https://api.groq.com/openai/v1/chat/completions",
       {
-        model: "llama3.2:3b",
+        model: "openai/gpt-oss-20b",
         messages: [
           {
             role: "system",
@@ -4259,21 +4259,25 @@ Rules:
             content: message.trim()
           }
         ],
+        temperature: 0.7,
+        max_completion_tokens: 1024,
         stream: false,
-        options: {
-          temperature: 0.7
-        }
+        include_reasoning: false
       },
       {
+        headers: {
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          "Content-Type": "application/json"
+        },
         timeout: 120000
       }
     );
 
     const responseText =
-      ollamaResponse.data?.message?.content?.trim();
+      groqResponse.data?.choices?.[0]?.message?.content?.trim();
 
     if (!responseText) {
-      throw new Error("Ollama returned an empty response.");
+      throw new Error("Groq returned an empty response.");
     }
 
     return res.json({
