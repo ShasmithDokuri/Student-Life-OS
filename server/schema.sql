@@ -995,8 +995,9 @@ CREATE TABLE public.users (
     id integer NOT NULL,
     name character varying(100) NOT NULL,
     email character varying(255) NOT NULL,
-    password_hash text NOT NULL,
-    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP
+    password_hash text,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+    google_id text UNIQUE
 );
 
 

@@ -5,6 +5,7 @@ const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
 const { Pool } = require("pg");
 
 const app = express();
@@ -13,6 +14,8 @@ const PORT = process.env.PORT || 5001;
 
 const JWT_SECRET =
   process.env.JWT_SECRET || "student-life-os-dev-secret";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 /* =========================================================
    DATABASE
@@ -355,6 +358,165 @@ app.post("/api/auth/login", async (req, res) => {
 
     res.status(500).json({
       message: "Unable to log in.",
+    });
+  }
+});
+
+/* =========================================================
+   AUTH — GOOGLE LOGIN
+========================================================= */
+
+app.post("/api/auth/google", async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        message: "Google credential is required.",
+      });
+    }
+
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(500).json({
+        message: "Google authentication is not configured.",
+      });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+
+    if (!payload) {
+      return res.status(401).json({
+        message: "Invalid Google credential.",
+      });
+    }
+
+    const googleId = payload.sub;
+    const email = payload.email?.trim().toLowerCase();
+    const name = payload.name?.trim();
+
+    if (!googleId || !email) {
+      return res.status(401).json({
+        message: "Google account information is incomplete.",
+      });
+    }
+
+    const googleUserResult = await pool.query(
+      `
+      SELECT
+        id,
+        name,
+        email,
+        password_hash,
+        created_at
+      FROM users
+      WHERE google_id = $1
+      `,
+      [googleId]
+    );
+
+    if (googleUserResult.rowCount > 0) {
+      const user = googleUserResult.rows[0];
+
+      const token = jwt.sign(
+        {
+          id: user.id,
+          email: user.email,
+        },
+        JWT_SECRET,
+        {
+          expiresIn: "7d",
+        }
+      );
+
+      delete user.password_hash;
+
+      return res.json({
+        token,
+        user,
+      });
+    }
+
+    const emailUserResult = await pool.query(
+      `
+      SELECT
+        id,
+        name,
+        email,
+        password_hash,
+        created_at,
+        google_id
+      FROM users
+      WHERE email = $1
+      `,
+      [email]
+    );
+
+    if (emailUserResult.rowCount > 0) {
+      const user = emailUserResult.rows[0];
+
+      if (user.google_id) {
+        return res.status(409).json({
+          message:
+            "This email is already connected to another Google account.",
+        });
+      }
+
+      return res.status(409).json({
+        message:
+          "An account with this email already exists. Sign in with your password first.",
+        accountExists: true,
+      });
+    }
+
+    const newUserResult = await pool.query(
+      `
+      INSERT INTO users
+        (name, email, password_hash, google_id)
+      VALUES
+        ($1, $2, NULL, $3)
+      RETURNING
+        id,
+        name,
+        email,
+        created_at
+      `,
+      [
+        name || email.split("@")[0],
+        email,
+        googleId,
+      ]
+    );
+
+    const user = newUserResult.rows[0];
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+      },
+      JWT_SECRET,
+      {
+        expiresIn: "7d",
+      }
+    );
+
+    return res.status(201).json({
+      token,
+      user,
+    });
+  } catch (error) {
+    console.error(
+      "Google authentication error:",
+      error.response?.data || error.message
+    );
+
+    return res.status(401).json({
+      message: "Google authentication failed.",
     });
   }
 });
