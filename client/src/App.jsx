@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import "./App.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "";
@@ -432,6 +435,54 @@ async function sendAiMessage(event) {
     }));
 
     setAuthError("");
+  }
+
+  async function handleGoogleLogin(credentialResponse) {
+    if (authLoading) return;
+
+    setAuthError("");
+    setAuthLoading(true);
+
+    try {
+      if (!credentialResponse?.credential) {
+        throw new Error("Google sign-in did not return a credential.");
+      }
+
+      const response = await fetch(`${API_URL}/api/auth/google`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          credential: credentialResponse.credential,
+        }),
+      });
+
+      const data = await parseResponse(response);
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || "Google authentication failed."
+        );
+      }
+
+      if (!data.token || !data.user) {
+        throw new Error(
+          "The server did not return a valid Google login response."
+        );
+      }
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+    } catch (error) {
+      console.error("Google login error:", error);
+      setAuthError(
+        error.message || "Unable to sign in with Google."
+      );
+    } finally {
+      setAuthLoading(false);
+    }
   }
 
   async function handleAuthSubmit(event) {
@@ -2329,6 +2380,7 @@ async function sendAiMessage(event) {
           );
           setAuthError("");
         }}
+        onGoogleLogin={handleGoogleLogin}
       />
     );
   }
@@ -2705,7 +2757,9 @@ async function sendAiMessage(event) {
                       <strong>
                         {message.role === "user" ? "You" : "AI Assistant"}
                       </strong>
-                      <p>{message.text}</p>
+                      <p><ReactMarkdown remarkPlugins={[remarkGfm]}>
+  {message.text}
+</ReactMarkdown></p>
                     </div>
                   ))}
 
@@ -4446,6 +4500,7 @@ function AuthScreen({
   onChange,
   onSubmit,
   onSwitch,
+  onGoogleLogin,
 }) {
   const isLogin = mode === "login";
 
@@ -4573,6 +4628,22 @@ function AuthScreen({
                     : "Create account"}
               </button>
             </form>
+
+            <div
+              style={{
+                marginTop: "16px",
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <GoogleLogin
+                onSuccess={onGoogleLogin}
+                onError={() => {
+                  setAuthError("Google sign-in was cancelled or failed.");
+                }}
+                useOneTap={false}
+              />
+            </div>
 
             <div className="auth-switch">
               <span>
